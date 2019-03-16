@@ -14,9 +14,11 @@
 const int buttonPin = 15;     // the number of the pushbutton pin
 const int ledPin =  2;      // the number of the LED pin
 
-// variables:
-int buttonState = 0;
+// variables will change:
+bool buttonState;         // variable for reading the pushbutton status
+//bool state;
 int counter;
+
 
 //For MPU:
 MPU6050 mpu;
@@ -25,18 +27,18 @@ int SDA_PIN = D7;
 
 
 void setup() {
-   Serial.begin(9600);
-   
-//--------------------------------------------------------------------
+  Serial.begin(9600);
+
+  //--------------------------------------------------------------------
   //Button and LED setup:
   // initialize the LED pin as an output:
   pinMode(ledPin, OUTPUT);
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT);
   digitalWrite(buttonPin, LOW); // Pullup functionality
-//--------------------------------------------------------------------
+  //--------------------------------------------------------------------
 
-  // connect to wifi setup.
+  //Connect to wifi setup.
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("connecting");
   while (WiFi.status() != WL_CONNECTED) {
@@ -46,13 +48,13 @@ void setup() {
   Serial.println();
   Serial.print("connected: ");
   Serial.println(WiFi.localIP());
-  
+
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
-//--------------------------------------------------------------------
- //Initialize MPU6050
+  //--------------------------------------------------------------------
+  //Initialize MPU6050
   Serial.println("Initialize MPU6050");
-  while (!mpu.beginSoftwareI2C(SCL_PIN,SDA_PIN,MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
+  while (!mpu.beginSoftwareI2C(SCL_PIN, SDA_PIN, MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
   {
     Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
     delay(500);
@@ -64,7 +66,7 @@ void setup() {
   // Set threshold sensivty. Default 3.
   // If you don't want use threshold, comment this line or set 0.
   mpu.setThreshold(3);
-  
+
   // Check settings
   checkSettings();
 }
@@ -85,7 +87,6 @@ void checkSettings()
     case MPU6050_CLOCK_PLL_XGYRO:      Serial.println("PLL with X axis gyroscope reference"); break;
     case MPU6050_CLOCK_INTERNAL_8MHZ:  Serial.println("Internal 8MHz oscillator"); break;
   }
-  
   Serial.print(" * Gyroscope:         ");
   switch (mpu.getScale())
   {
@@ -93,8 +94,7 @@ void checkSettings()
     case MPU6050_SCALE_1000DPS:        Serial.println("1000 dps"); break;
     case MPU6050_SCALE_500DPS:         Serial.println("500 dps"); break;
     case MPU6050_SCALE_250DPS:         Serial.println("250 dps"); break;
-  } 
-  
+  }
   Serial.print(" * Gyroscope offsets: ");
   Serial.print(mpu.getGyroOffsetX());
   Serial.print(" / ");
@@ -102,67 +102,125 @@ void checkSettings()
   Serial.print(" / ");
   Serial.println(mpu.getGyroOffsetZ());
   Serial.println();
+
+  Serial.print(" * Accelerometer:         ");
+  switch (mpu.getRange())
+  {
+    case MPU6050_RANGE_16G:            Serial.println("+/- 16 g"); break;
+    case MPU6050_RANGE_8G:             Serial.println("+/- 8 g"); break;
+    case MPU6050_RANGE_4G:             Serial.println("+/- 4 g"); break;
+    case MPU6050_RANGE_2G:             Serial.println("+/- 2 g"); break;
+  }
+
+  Serial.print(" * Accelerometer offsets: ");
+  Serial.print(mpu.getAccelOffsetX());
+  Serial.print(" / ");
+  Serial.print(mpu.getAccelOffsetY());
+  Serial.print(" / ");
+  Serial.println(mpu.getAccelOffsetZ());
+
+  Serial.println();
 }
 
+
 void loop() {
- Vector rawGyro = mpu.readRawGyro();
-   
-   float Xval = rawGyro.XAxis;
-   float Yval = rawGyro.YAxis;
-   float Zval = rawGyro.ZAxis;
-   
+  Vector rawGyro = mpu.readRawGyro();
+  Vector rawAccel = mpu.readRawAccel();
+
   // read the state of the pushbutton value:
   buttonState = digitalRead(buttonPin);
+
+  float Xval = rawGyro.XAxis;
+  float Yval = rawGyro.YAxis;
+  float Zval = rawGyro.ZAxis;
+
+  float Xacc = rawAccel.XAxis;
+  float Yacc = rawAccel.YAxis;
+  float Zacc = rawAccel.ZAxis;
+
 
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
   if (buttonState || counter > 0) {
     // turn LED on:
     digitalWrite(ledPin, HIGH);
-     
-  //Print values on the serial:
-  Serial.print(" Xraw = ");
-  Serial.print(rawGyro.XAxis);
-  Serial.print(" Yraw = ");
-  Serial.print(rawGyro.YAxis);
-  Serial.print(" Zraw = ");
-  Serial.println(rawGyro.ZAxis);
-  
-  //Upload the gyroscope values on Firebase with error handling:
-  Firebase.pushFloat("GyroX", Xval);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting Gyro X failed:");
-      Serial.println(Firebase.error());  
+
+    //Print values on the serial:
+    Serial.print(" Xraw = ");
+    Serial.print(Xval);
+    Serial.print(" Yraw = ");
+    Serial.print(Yval);
+    Serial.print(" Zraw = ");
+    Serial.println(Zval);
+
+    //Print the accelerometer values on the serial:
+    Serial.println();
+    Serial.print(" Xraw accelerometer = ");
+    Serial.print(Xacc);
+    Serial.print(" Yraw accelerometer ");
+    Serial.print(Yacc);
+    Serial.print(" Zraw accelerometer  ");
+    Serial.print(Zacc);
+
+    //Upload the gyroscope values on Firebase with error handling:
+    Firebase.pushFloat("numberX", Xval);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number X failed:");
+      Serial.println(Firebase.error());
       return;
-  }
-  Firebase.pushFloat("GyroY", Yval);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting GyroY failed:");
-      Serial.println(Firebase.error());  
+    }
+    Firebase.pushFloat("numberY", Yval);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number Y failed:");
+      Serial.println(Firebase.error());
       return;
-  }
-  Firebase.pushFloat("GyroZ", Zval);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting GyroZ failed:");
-      Serial.println(Firebase.error());  
+    }
+    Firebase.pushFloat("numberZ", Zval);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number Z failed:");
+      Serial.println(Firebase.error());
       return;
-  }
-     
+    }
+
+
+    //Upload the accelerometer values on the Firebase with error handling:
+    Firebase.pushFloat("accelX", Xacc);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number X failed:");
+      Serial.println(Firebase.error());
+      return;
+    }
+    Firebase.pushFloat("accelY", Yacc);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number Y failed:");
+      Serial.println(Firebase.error());
+      return;
+    }
+    Firebase.pushFloat("accelZ", Zacc);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.print("setting number Z failed:");
+      Serial.println(Firebase.error());
+      return;
+    }
+
     //Use the counter to enter inside this if statement 10 times:
     counter++;
 
     //If the counter's value is 10 reset the value and wait for another button press:
-	    if (counter > 9) {
-    counter = 0;
+    if (counter > 9) {
+      counter = 0;
     }
   }
-   
+
   else {
     // turn LED off:
     digitalWrite(ledPin, LOW);
   }
- 
+
 }
