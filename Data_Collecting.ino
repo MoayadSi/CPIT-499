@@ -4,17 +4,19 @@
 #include <MPU6050.h>
 
 //For the Firebase:
-#define FIREBASE_HOST "myproject-d9975.firebaseio.com"
-#define FIREBASE_AUTH "qMu5aHbg1qmpurM6LkJa105gsTQCGolXCPvmxnlp"
+#define FIREBASE_HOST "mytestproject-77f1d.firebaseio.com"
+#define FIREBASE_AUTH "NpC8NscgUvC1qFZSgc58tMfPu8B0pLpqUd0qhyws"
 #define WIFI_SSID "AndroidAPEADC"
 #define WIFI_PASSWORD "kyxf1580"
+#define TRIGGER 5
+#define ECHO    4
 
 //For the LED:
-// set pin numbers:
+//Set pin numbers:
 const int buttonPin = 15;     // the number of the pushbutton pin
 const int ledPin =  2;      // the number of the LED pin
 
-// variables will change:
+//Variables:
 bool buttonState;         // variable for reading the pushbutton status
 //bool state;
 int counter;
@@ -24,7 +26,6 @@ int counter;
 MPU6050 mpu;
 int SCL_PIN = D6;
 int SDA_PIN = D7;
-
 
 void setup() {
   Serial.begin(9600);
@@ -48,7 +49,6 @@ void setup() {
   Serial.println();
   Serial.print("connected: ");
   Serial.println(WiFi.localIP());
-
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
   //--------------------------------------------------------------------
@@ -69,6 +69,10 @@ void setup() {
 
   // Check settings
   checkSettings();
+
+  // Ultrasonic settings
+  pinMode(TRIGGER, OUTPUT);
+  pinMode(ECHO, INPUT);
 }
 
 void checkSettings()
@@ -118,10 +122,8 @@ void checkSettings()
   Serial.print(mpu.getAccelOffsetY());
   Serial.print(" / ");
   Serial.println(mpu.getAccelOffsetZ());
-
   Serial.println();
 }
-
 
 void loop() {
   Vector rawGyro = mpu.readRawGyro();
@@ -130,84 +132,106 @@ void loop() {
   // read the state of the pushbutton value:
   buttonState = digitalRead(buttonPin);
 
-  float Xval = rawGyro.XAxis;
-  float Yval = rawGyro.YAxis;
-  float Zval = rawGyro.ZAxis;
+  float xGyro = rawGyro.XAxis;
+  float yGyro = rawGyro.YAxis;
+  float zGyro = rawGyro.ZAxis;
 
   float Xacc = rawAccel.XAxis;
   float Yacc = rawAccel.YAxis;
   float Zacc = rawAccel.ZAxis;
-
 
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
   if (buttonState || counter > 0) {
     // turn LED on:
     digitalWrite(ledPin, HIGH);
-
     //Print values on the serial:
     Serial.print(" Xraw = ");
-    Serial.print(Xval);
+    Serial.print(xGyro);
     Serial.print(" Yraw = ");
-    Serial.print(Yval);
+    Serial.print(yGyro);
     Serial.print(" Zraw = ");
-    Serial.println(Zval);
+    Serial.println(zGyro);
 
     //Print the accelerometer values on the serial:
     Serial.println();
-    Serial.print(" Xraw accelerometer = ");
+    Serial.print(" Xraw accel = ");
     Serial.print(Xacc);
-    Serial.print(" Yraw accelerometer ");
+    Serial.print(" Yraw accel = ");
     Serial.print(Yacc);
-    Serial.print(" Zraw accelerometer  ");
-    Serial.print(Zacc);
+    Serial.print(" Zraw accel = ");
+    Serial.println(Zacc);
+    Serial.println("---------------------------------------------");
 
+    //Ultrasonic value will be determined:
+    float duration, distance;
+    digitalWrite(TRIGGER, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIGGER, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIGGER, LOW);
+    duration = pulseIn(ECHO, HIGH);
+    distance = (duration / 2) / 29.1;
+    Serial.print("Centimeter: ");
+    Serial.println(distance);
+    delay(1000);
+    Serial.println("---------------------------------------------");
+    Serial.println("---------------------------------------------");
+
+    //===========================================================================================
     //Upload the gyroscope values on Firebase with error handling:
-    Firebase.pushFloat("numberX", Xval);
+    Firebase.pushFloat("GyroXfliped", xGyro);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number X failed:");
+      Serial.println("setting gyro X failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("numberY", Yval);
+    Firebase.pushFloat("GyroYfliped", yGyro);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number Y failed:");
+      Serial.println("setting gyro Y failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("numberZ", Zval);
+    Firebase.pushFloat("GyroZfliped", zGyro);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number Z failed:");
+      Serial.println("setting gyro Z failed:");
       Serial.println(Firebase.error());
       return;
     }
-
-
+    //===========================================================================================
     //Upload the accelerometer values on the Firebase with error handling:
-    Firebase.pushFloat("accelX", Xacc);
+    Firebase.pushFloat("accelXfliped", Xacc);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number X failed:");
+      Serial.println("setting accel X failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("accelY", Yacc);
+    Firebase.pushFloat("accelYfliped", Yacc);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number Y failed:");
+      Serial.println("setting accel Y failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("accelZ", Zacc);
+    Firebase.pushFloat("accelZfliped", Zacc);
     // handle error
     if (Firebase.failed()) {
-      Serial.print("setting number Z failed:");
+      Serial.println("setting accel Z failed:");
       Serial.println(Firebase.error());
       return;
     }
+    Firebase.pushFloat("UltrasonicCMfliped", distance);
+    // handle error
+    if (Firebase.failed()) {
+      Serial.println("setting ultrasonic value failed:");
+      Serial.println(Firebase.error());
+      return;
+    }
+    //===========================================================================================
 
     //Use the counter to enter inside this if statement 10 times:
     counter++;
@@ -222,5 +246,4 @@ void loop() {
     // turn LED off:
     digitalWrite(ledPin, LOW);
   }
-
 }
