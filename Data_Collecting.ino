@@ -1,35 +1,29 @@
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
 #include <Wire.h>
-#include <MPU6050.h>
+#include "myMPU.h";
+#include "myUltrasonic.h";
 
 //For the Firebase:
-#define FIREBASE_HOST "mytestproject-77f1d.firebaseio.com"
-#define FIREBASE_AUTH "NpC8NscgUvC1qFZSgc58tMfPu8B0pLpqUd0qhyws"
+#define FIREBASE_HOST "myproject-d9975.firebaseio.com"
+#define FIREBASE_AUTH "qMu5aHbg1qmpurM6LkJa105gsTQCGolXCPvmxnlp"
 #define WIFI_SSID "AndroidAPEADC"
 #define WIFI_PASSWORD "kyxf1580"
-#define TRIGGER 5
-#define ECHO    4
 
 //For the LED:
-//Set pin numbers:
+// set pin numbers:
 const int buttonPin = 15;     // the number of the pushbutton pin
 const int ledPin =  2;      // the number of the LED pin
 
-//Variables:
+// variables:
 bool buttonState;         // variable for reading the pushbutton status
-//bool state;
 int counter;
-
-
-//For MPU:
-MPU6050 mpu;
-int SCL_PIN = D6;
-int SDA_PIN = D7;
+myMPU mpu1(D6, D7);
+MyUltrasonic MyUS(5, 4);
 
 void setup() {
   Serial.begin(9600);
-
+  MyUS.setupUltrasonic();
   //--------------------------------------------------------------------
   //Button and LED setup:
   // initialize the LED pin as an output:
@@ -49,97 +43,27 @@ void setup() {
   Serial.println();
   Serial.print("connected: ");
   Serial.println(WiFi.localIP());
+
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
   //--------------------------------------------------------------------
-  //Initialize MPU6050
-  Serial.println("Initialize MPU6050");
-  while (!mpu.beginSoftwareI2C(SCL_PIN, SDA_PIN, MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
-  {
-    Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
-    delay(500);
-  }
-  // Calibrate gyroscope. The calibration must be at rest.
-  // If you don't want calibrate, comment this line.
-  mpu.calibrateGyro();
-
-  // Set threshold sensivty. Default 3.
-  // If you don't want use threshold, comment this line or set 0.
-  mpu.setThreshold(3);
-
-  // Check settings
-  checkSettings();
-
-  // Ultrasonic settings
-  pinMode(TRIGGER, OUTPUT);
-  pinMode(ECHO, INPUT);
-}
-
-void checkSettings()
-{
-  Serial.println();
-  Serial.print(" * Sleep Mode:        ");
-  Serial.println(mpu.getSleepEnabled() ? "Enabled" : "Disabled");
-  Serial.print(" * Clock Source:      ");
-  switch (mpu.getClockSource())
-  {
-    case MPU6050_CLOCK_KEEP_RESET:     Serial.println("Stops the clock and keeps the timing generator in reset"); break;
-    case MPU6050_CLOCK_EXTERNAL_19MHZ: Serial.println("PLL with external 19.2MHz reference"); break;
-    case MPU6050_CLOCK_EXTERNAL_32KHZ: Serial.println("PLL with external 32.768kHz reference"); break;
-    case MPU6050_CLOCK_PLL_ZGYRO:      Serial.println("PLL with Z axis gyroscope reference"); break;
-    case MPU6050_CLOCK_PLL_YGYRO:      Serial.println("PLL with Y axis gyroscope reference"); break;
-    case MPU6050_CLOCK_PLL_XGYRO:      Serial.println("PLL with X axis gyroscope reference"); break;
-    case MPU6050_CLOCK_INTERNAL_8MHZ:  Serial.println("Internal 8MHz oscillator"); break;
-  }
-  Serial.print(" * Gyroscope:         ");
-  switch (mpu.getScale())
-  {
-    case MPU6050_SCALE_2000DPS:        Serial.println("2000 dps"); break;
-    case MPU6050_SCALE_1000DPS:        Serial.println("1000 dps"); break;
-    case MPU6050_SCALE_500DPS:         Serial.println("500 dps"); break;
-    case MPU6050_SCALE_250DPS:         Serial.println("250 dps"); break;
-  }
-  Serial.print(" * Gyroscope offsets: ");
-  Serial.print(mpu.getGyroOffsetX());
-  Serial.print(" / ");
-  Serial.print(mpu.getGyroOffsetY());
-  Serial.print(" / ");
-  Serial.println(mpu.getGyroOffsetZ());
-  Serial.println();
-
-  Serial.print(" * Accelerometer:         ");
-  switch (mpu.getRange())
-  {
-    case MPU6050_RANGE_16G:            Serial.println("+/- 16 g"); break;
-    case MPU6050_RANGE_8G:             Serial.println("+/- 8 g"); break;
-    case MPU6050_RANGE_4G:             Serial.println("+/- 4 g"); break;
-    case MPU6050_RANGE_2G:             Serial.println("+/- 2 g"); break;
-  }
-
-  Serial.print(" * Accelerometer offsets: ");
-  Serial.print(mpu.getAccelOffsetX());
-  Serial.print(" / ");
-  Serial.print(mpu.getAccelOffsetY());
-  Serial.print(" / ");
-  Serial.println(mpu.getAccelOffsetZ());
-  Serial.println();
+  mpu1.initializingMPU();
 }
 
 void loop() {
-  Vector rawGyro = mpu.readRawGyro();
-  Vector rawAccel = mpu.readRawAccel();
 
   // read the state of the pushbutton value:
   buttonState = digitalRead(buttonPin);
 
-  float xGyro = rawGyro.XAxis;
-  float yGyro = rawGyro.YAxis;
-  float zGyro = rawGyro.ZAxis;
+  float xGyro = mpu1.getGyroX();
+  float yGyro = mpu1.getGyroY();
+  float zGyro = mpu1.getGyroZ();
 
-  float Xacc = rawAccel.XAxis;
-  float Yacc = rawAccel.YAxis;
-  float Zacc = rawAccel.ZAxis;
+  float Xacc = mpu1.getAccelX();
+  float Yacc = mpu1.getAccelY();
+  float Zacc = mpu1.getAccelZ();
 
+  float USvalue = MyUS.getUltrasonic();
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
   if (buttonState || counter > 0) {
@@ -162,39 +86,52 @@ void loop() {
     Serial.print(" Zraw accel = ");
     Serial.println(Zacc);
     Serial.println("---------------------------------------------");
-
+    
     //Ultrasonic value will be determined:
-    float duration, distance;
-    digitalWrite(TRIGGER, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIGGER, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER, LOW);
-    duration = pulseIn(ECHO, HIGH);
-    distance = (duration / 2) / 29.1;
     Serial.print("Centimeter: ");
-    Serial.println(distance);
-    delay(1000);
+    Serial.println(USvalue);
     Serial.println("---------------------------------------------");
     Serial.println("---------------------------------------------");
 
     //===========================================================================================
+    //For Testing purposes only
+//    bool GyroXtest = mpu1.testGyroX(xGyro);
+//    Serial.println("GyroX Test = ");
+//    Serial.println(GyroXtest);
+//    bool GyroYtest = mpu1.testGyroY(yGyro);
+//    Serial.println("GyroY Test = ");
+//    Serial.println(GyroYtest);
+//    bool GyroZtest = mpu1.testGyroZ(zGyro);
+//    Serial.println("GyroZ Test = ");
+//    Serial.println(GyroZtest);
+//    bool AccelXtest = mpu1.testAccelX(Xacc);
+//    Serial.println("AccelX Test = ");
+//    Serial.println(AccelXtest);
+//    bool AccelYtest = mpu1.testAccelY(Yacc);
+//    Serial.println("AccelY Test = ");
+//    Serial.println(AccelYtest);
+//    bool AccelZtest = mpu1.testAccelZ(Zacc);
+//    Serial.println("AccelZ Test = ");
+//    Serial.println(AccelZtest);
+    //===========================================================================================
+
+    //===========================================================================================
     //Upload the gyroscope values on Firebase with error handling:
-    Firebase.pushFloat("GyroXfliped", xGyro);
+    Firebase.pushFloat("GyroX", xGyro);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting gyro X failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("GyroYfliped", yGyro);
+    Firebase.pushFloat("GyroY", yGyro);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting gyro Y failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("GyroZfliped", zGyro);
+    Firebase.pushFloat("GyroZ", zGyro);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting gyro Z failed:");
@@ -203,28 +140,30 @@ void loop() {
     }
     //===========================================================================================
     //Upload the accelerometer values on the Firebase with error handling:
-    Firebase.pushFloat("accelXfliped", Xacc);
+    Firebase.pushFloat("accelX", Xacc);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting accel X failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("accelYfliped", Yacc);
+    Firebase.pushFloat("accelY", Yacc);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting accel Y failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("accelZfliped", Zacc);
+    Firebase.pushFloat("accelZ", Zacc);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting accel Z failed:");
       Serial.println(Firebase.error());
       return;
     }
-    Firebase.pushFloat("UltrasonicCMfliped", distance);
+    //===========================================================================================
+    //Upload Ultrasonic value to the firebase:
+    Firebase.pushFloat("UltrasonicCM", USvalue);
     // handle error
     if (Firebase.failed()) {
       Serial.println("setting ultrasonic value failed:");
@@ -246,4 +185,5 @@ void loop() {
     // turn LED off:
     digitalWrite(ledPin, LOW);
   }
+
 }
