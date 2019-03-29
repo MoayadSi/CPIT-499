@@ -1,14 +1,10 @@
 package hexapod_classifier;
 
 import java.sql.*;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import org.rosuda.JRI.REXP;
-import org.rosuda.JRI.RVector;
-import org.rosuda.JRI.Rengine;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import org.rosuda.JRI.*;
 
 public class Hexapod_Classifier {
 
@@ -26,29 +22,36 @@ public class Hexapod_Classifier {
             //Create a statment and a resultset:
             Statement stmt = conn.createStatement();
             ResultSet rs = null;
-
+            
             //String createTable = "CREATE TABLE coefficients (Intercept INT,GyroX INT, GyroY INT, GyroZ INT, PRIMARY KEY (Intercept))";
             //String insertInto = "INSERT INTO coefficients (Intercept,GyroX, GyroY, GyroZ) values (44523,2343,52334,223)";
             // stmt.execute(createTable);
+
             //Identify variables:
             String mySelectStmt;
             int index = 0;
-            int GyroXvalues[] = new int[2600];
-            int GyroYvalues[] = new int[2600];
-            int GyroZvalues[] = new int[2600];
-
+            double GyroXvalues[] = new double[2600];
+            double GyroYvalues[] = new double[2600];
+            double GyroZvalues[] = new double[2600];
+            double Position[] = new double[2600];
+            
             //Write the select statment and save it in resultset:
             mySelectStmt = "select * from training_data";
             rs = stmt.executeQuery(mySelectStmt);
 
+            //Move the cursor through the resultset and save the values in the proper array:
             while (rs.next()) {
                 GyroXvalues[index] = rs.getInt(2);
                 GyroYvalues[index] = rs.getInt(3);
                 GyroZvalues[index] = rs.getInt(4);
+                Position[index] = rs.getInt(5);
+
                 //Print the values for testing:
                 System.out.println(index + " " + GyroXvalues[index]);
                 index++;
             }
+            
+            
             //Connect netbeans with R
             if (!Rengine.versionCheck()) {
                 System.err.println("Java version mismatch.");
@@ -60,19 +63,29 @@ public class Hexapod_Classifier {
                 System.out.println("Cannot load R");
                 System.exit(1);
             }
-            //for testing purposes:
-            int testR = 23;
-            re.eval("kkk<-" + testR);
-            double i = re.eval("kkk").asDouble();
-            System.out.println("");
-            System.out.println(i);
-
+            
+            //=================================================================
+            //The lm function:
+            re.assign("GyroX", GyroXvalues);
+            re.assign("GyroY", GyroYvalues);
+            re.assign("GyroZ", GyroZvalues);
+            re.assign("Position", Position);
+            re.eval("Myobj = lm(Position ~ GyroX + GyroY + GyroZ)");
+            RVector Myobj = re.eval("Myobj").asVector();
+            System.out.println("The Intercept is : " + Myobj.at(0).asDoubleArray()[0]);
+            System.out.println("The GX is : " + Myobj.at(0).asDoubleArray()[1]);
+            System.out.println("The  GY is : " + Myobj.at(0).asDoubleArray()[2]);
+            System.out.println("The GZ is : " + Myobj.at(0).asDoubleArray()[3]);
+            
+            
+            
             //close the rengine and the resultset
             re.end();
             rs.close();
 
         } catch (SQLException e) {
             System.err.println(e);
+            
         } finally {
             try {
                 conn.close();
