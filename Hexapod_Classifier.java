@@ -5,6 +5,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import org.rosuda.JRI.*;
+import arduino.*;
 
 public class Hexapod_Classifier {
 
@@ -22,11 +23,10 @@ public class Hexapod_Classifier {
             //Create a statment and a resultset:
             Statement stmt = conn.createStatement();
             ResultSet rs = null;
-            
+
             //String createTable = "CREATE TABLE coefficients (Intercept INT,GyroX INT, GyroY INT, GyroZ INT, PRIMARY KEY (Intercept))";
             //String insertInto = "INSERT INTO coefficients (Intercept,GyroX, GyroY, GyroZ) values (44523,2343,52334,223)";
-            // stmt.execute(createTable);
-
+            //stmt.execute(createTable);
             //Identify variables:
             String mySelectStmt;
             int index = 0;
@@ -34,7 +34,7 @@ public class Hexapod_Classifier {
             double GyroYvalues[] = new double[2600];
             double GyroZvalues[] = new double[2600];
             double Position[] = new double[2600];
-            
+
             //Write the select statment and save it in resultset:
             mySelectStmt = "select * from training_data";
             rs = stmt.executeQuery(mySelectStmt);
@@ -50,8 +50,8 @@ public class Hexapod_Classifier {
                 System.out.println(index + " " + GyroXvalues[index]);
                 index++;
             }
-            
-            
+
+            //=================================================================
             //Connect netbeans with R
             if (!Rengine.versionCheck()) {
                 System.err.println("Java version mismatch.");
@@ -63,7 +63,7 @@ public class Hexapod_Classifier {
                 System.out.println("Cannot load R");
                 System.exit(1);
             }
-            
+
             //=================================================================
             //The lm function:
             re.assign("GyroX", GyroXvalues);
@@ -74,18 +74,31 @@ public class Hexapod_Classifier {
             RVector Myobj = re.eval("Myobj").asVector();
             System.out.println("The Intercept is : " + Myobj.at(0).asDoubleArray()[0]);
             System.out.println("The GX is : " + Myobj.at(0).asDoubleArray()[1]);
-            System.out.println("The  GY is : " + Myobj.at(0).asDoubleArray()[2]);
+            System.out.println("The GY is : " + Myobj.at(0).asDoubleArray()[2]);
             System.out.println("The GZ is : " + Myobj.at(0).asDoubleArray()[3]);
-            
-            
-            
+
+            //=================================================================
+            //Read from the arduino serial using the MPU class methods:
+            MPU myMPU = new MPU();
+            String readings = myMPU.readFromSerial();
+            double myGyroXvalue = myMPU.ReadGyroX(readings);
+            double myGyroYvalue = myMPU.ReadGyroY(readings);
+            double myGyroZvalue = myMPU.ReadGyroZ(readings);
+            myMPU.setGyroX(myGyroXvalue);
+            myMPU.setGyroY(myGyroYvalue);
+            myMPU.setGyroZ(myGyroZvalue);
+
+            System.out.println("My Gyro values are: \n"
+                    + " X: " + myMPU.getGyroX() + " and Y: " + myMPU.getGyroY() + " and Z: " + myMPU.getGyroZ());
+
+            //=================================================================
             //close the rengine and the resultset
             re.end();
             rs.close();
 
         } catch (SQLException e) {
             System.err.println(e);
-            
+
         } finally {
             try {
                 conn.close();
