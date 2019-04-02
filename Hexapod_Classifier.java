@@ -65,15 +65,15 @@ public class Hexapod_Classifier {
                 System.out.println("Cannot load R");
                 System.exit(1);
             }
-            //=================================================================
 
+            //=================================================================
             Scanner input = new Scanner(System.in);
             int choice = 0;
             while (true) {
                 System.out.println();
                 System.out.println("Please choose an action where: \n"
-                        + "1: to get the position value. \n"
-                        + "2: to read MPU values from the arduino serial. \n"
+                        + "1: to read MPU values from the arduino serial. \n"
+                        + "2: to get the position value.\n"
                         + "3: to change the mode in the arduino. \n"
                         + "0: to exit from the system.");
                 System.out.print("Please type here: ");
@@ -81,38 +81,6 @@ public class Hexapod_Classifier {
 
                 //=================================================================
                 if (choice == 1) {
-                    //The R function:
-                    re.assign("GyroX", GyroXvalues);
-                    re.assign("GyroY", GyroYvalues);
-                    re.assign("GyroZ", GyroZvalues);
-                    re.assign("Position", Position);
-//=================================================================
-//                    re.eval("Myobj = lm(Position ~ GyroX + GyroY + GyroZ)");
-//                    RVector Myobj = re.eval("Myobj").asVector();
-//                    System.out.println("The Intercept is : " + Myobj.at(0).asDoubleArray()[0]);
-//                    System.out.println("The GX is : " + Myobj.at(0).asDoubleArray()[1]);
-//                    System.out.println("The GY is : " + Myobj.at(0).asDoubleArray()[2]);
-//                    System.out.println("The GZ is : " + Myobj.at(0).asDoubleArray()[3]);
-//=================================================================
-                    re.eval("Gx <- matrix(GyroX,ncol=1,byrow=FALSE)");
-                    re.eval("Gy <- matrix(GyroY,ncol=1,byrow=FALSE)");
-                    re.eval("Gz <- matrix(GyroZ,ncol=1,byrow=FALSE)");
-                    re.eval("colnames(Gx) <- \"GyroX\"");
-                    re.eval("colnames(Gy) <- \"GyroY\"");
-                    re.eval("colnames(Gz) <- \"GyroZ\"");
-                    re.eval("colnames(pos) <- \"Position\"");
-                    re.eval("allData = cbind(Gx,Gy,Gz,pos)");
-                    re.eval("myDataframe =as.data.frame(allData)");
-//                    re.eval("mynum <- myDataframe$GyroX[1]");
-//                    double myobj = re.eval("mynum").asDouble();
-//                    System.out.println("Value is : " + myobj);
-                    re.eval("library(class)");
-                    re.eval("traindata = myDataframe[1:3]");
-                    re.eval("trainlabels = myDataframe[4]");
-                    re.eval("iris_pred <- knn(train = traindata, test = traindata, cl = trainlabels[,1], k=13)");
-
-                } //=================================================================
-                else if (choice == 2) {
                     //Read from the arduino serial using the MPU class methods:
                     MPU myMPU = new MPU();
                     String readings = myMPU.readFromSerial();
@@ -126,6 +94,36 @@ public class Hexapod_Classifier {
                     System.out.println("My Gyro values are: \n"
                             + " X: " + myMPU.getGyroX() + " and Y: " + myMPU.getGyroY() + " and Z: " + myMPU.getGyroZ());
                     System.out.println();
+                } //=================================================================
+                else if (choice == 2) {
+                    //The R function:
+                    re.assign("GyroX", GyroXvalues);
+                    re.assign("GyroY", GyroYvalues);
+                    re.assign("GyroZ", GyroZvalues);
+                    re.assign("Position", Position);
+                    re.eval("Gx <- matrix(GyroX,ncol=1,byrow=FALSE)");
+                    re.eval("Gy <- matrix(GyroY,ncol=1,byrow=FALSE)");
+                    re.eval("Gz <- matrix(GyroZ,ncol=1,byrow=FALSE)");
+                    re.eval("pos <- matrix(Position,ncol=1,byrow=FALSE)");
+                    re.eval("colnames(Gx) <- \"GyroX\"");
+                    re.eval("colnames(Gy) <- \"GyroY\"");
+                    re.eval("colnames(Gz) <- \"GyroZ\"");
+                    re.eval("colnames(pos) <- \"Position\"");
+                    re.eval("allData = cbind(Gx,Gy,Gz,pos)");
+                    re.eval("myDataframe =as.data.frame(allData)");
+                    re.eval("library(class)");
+                    re.eval("traindata = myDataframe[1:3]");
+                    re.eval("trainlabels = myDataframe[4]");
+                    re.eval("myknn <- knn(train = traindata, test = traindata, cl = trainlabels[,1], k=13)");
+                    re.eval("library(caret)");
+                    re.eval("model_knn <- train(traindata, trainlabels[,1], method='knn', preProcess=c(\"center\", \"scale\"))");
+                    re.eval("predictions<-predict.train(object=model_knn,myDataframe[,1:3], type=\"raw\")");
+                    re.eval("model_knn <- train(traindata, trainlabels[,1], method='knn')");
+                    re.eval("predictions<-predict(object=model_knn,traindata)");
+                    re.eval("x <- data.frame(\"GyroX\" = 65497, \"GyroY\" = 65524, \"GyroZ\" =65508)");
+                    re.eval("y = predict(object=model_knn,x)");
+                    double test = re.eval("y").asDouble();
+                    System.out.println("Value is : " + test);
                 } //=================================================================
                 else if (choice == 3) {
                     Arduino arduino = new Arduino("COM4", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
