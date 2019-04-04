@@ -1,4 +1,4 @@
-package hexapod_classifier;
+package mpuandr;
 
 import java.sql.*;
 import java.io.*;
@@ -9,9 +9,9 @@ import arduino.*;
 
 public class Hexapod_Classifier {
 
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "";
-    private static final String CONN_STRING = "jdbc:mysql://127.0.0.1/Hexapod_CF";
+    private static final String USERNAME = "arduinouser";
+    private static final String PASSWORD = "zyx987";
+    private static final String CONN_STRING = "jdbc:mysql://127.0.0.1/arduino_db";
 
     public static void main(String[] args) {
         Connection conn = null;
@@ -23,6 +23,7 @@ public class Hexapod_Classifier {
             //Create a statment and a resultset:
             Statement stmt = conn.createStatement();
             ResultSet rs = null;
+            MPU myMPU = new MPU();
 
             //=================================================================
             //String createTable = "CREATE TABLE coefficients (Intercept INT,GyroX INT, GyroY INT, GyroZ INT, PRIMARY KEY (Intercept))";
@@ -36,9 +37,14 @@ public class Hexapod_Classifier {
             double GyroYvalues[] = new double[2600];
             double GyroZvalues[] = new double[2600];
             double Position[] = new double[2600];
-
+            String updateTable;
+            double pos;
+            String message;
+            char oneChar = 0;
+            char mode = 0;
+            int myPos;
             //Write the select statment and save it in resultset:
-            mySelectStmt = "select * from training_data";
+            mySelectStmt = "select * from dataset";
             rs = stmt.executeQuery(mySelectStmt);
 
             //Move the cursor through the resultset and save the values in the proper array:
@@ -82,8 +88,8 @@ public class Hexapod_Classifier {
                 //=================================================================
                 if (choice == 1) {
                     //Read from the arduino serial using the MPU class methods:
-                    MPU myMPU = new MPU();
-                    String readings = myMPU.readFromSerial();
+                    oneChar = 'R';
+                    String readings = myMPU.readFromSerial(oneChar);
                     double myGyroXvalue = myMPU.ReadGyroX(readings);
                     double myGyroYvalue = myMPU.ReadGyroY(readings);
                     double myGyroZvalue = myMPU.ReadGyroZ(readings);
@@ -97,41 +103,71 @@ public class Hexapod_Classifier {
                 } //=================================================================
                 else if (choice == 2) {
                     //The R function:
+                    System.out.println(re.eval("gX <- " + myMPU.getGyroX()));
+                    System.out.println(re.eval("gY <- " + myMPU.getGyroY()));
+                    System.out.println(re.eval("gZ <- " + myMPU.getGyroZ()));
                     re.assign("GyroX", GyroXvalues);
                     re.assign("GyroY", GyroYvalues);
                     re.assign("GyroZ", GyroZvalues);
                     re.assign("Position", Position);
-                    re.eval("Gx <- matrix(GyroX,ncol=1,byrow=FALSE)");
-                    re.eval("Gy <- matrix(GyroY,ncol=1,byrow=FALSE)");
-                    re.eval("Gz <- matrix(GyroZ,ncol=1,byrow=FALSE)");
-                    re.eval("pos <- matrix(Position,ncol=1,byrow=FALSE)");
-                    re.eval("colnames(Gx) <- \"GyroX\"");
-                    re.eval("colnames(Gy) <- \"GyroY\"");
-                    re.eval("colnames(Gz) <- \"GyroZ\"");
-                    re.eval("colnames(pos) <- \"Position\"");
-                    re.eval("allData = cbind(Gx,Gy,Gz,pos)");
-                    re.eval("myDataframe =as.data.frame(allData)");
-                    re.eval("library(class)");
-                    re.eval("traindata = myDataframe[1:3]");
-                    re.eval("trainlabels = myDataframe[4]");
-                    re.eval("myknn <- knn(train = traindata, test = traindata, cl = trainlabels[,1], k=13)");
-                    re.eval("library(caret)");
-                    re.eval("model_knn <- train(traindata, trainlabels[,1], method='knn', preProcess=c(\"center\", \"scale\"))");
-                    re.eval("predictions<-predict.train(object=model_knn,myDataframe[,1:3], type=\"raw\")");
-                    re.eval("model_knn <- train(traindata, trainlabels[,1], method='knn')");
-                    re.eval("predictions<-predict(object=model_knn,traindata)");
-                    re.eval("x <- data.frame(\"GyroX\" = 65497, \"GyroY\" = 65524, \"GyroZ\" =65508)");
-                    re.eval("y = predict(object=model_knn,x)");
-                    double test = re.eval("y").asDouble();
-                    System.out.println("Value is : " + test);
+                    System.out.println(re.eval("Gx <- matrix(GyroX,ncol=1,byrow=FALSE)"));
+                    System.out.println(re.eval("Gy <- matrix(GyroY,ncol=1,byrow=FALSE)"));
+                    System.out.println(re.eval("Gz <- matrix(GyroZ,ncol=1,byrow=FALSE)"));
+                    System.out.println(re.eval("pos <- matrix(Position,ncol=1,byrow=FALSE)"));
+                    System.out.println(re.eval("colnames(Gx) <- \"GyroX\""));
+                    System.out.println(re.eval("colnames(Gy) <- \"GyroY\""));
+                    System.out.println(re.eval("colnames(Gz) <- \"GyroZ\""));
+                    System.out.println(re.eval("colnames(pos) <- \"Position\""));
+                    System.out.println(re.eval("allData = cbind(Gx,Gy,Gz,pos)"));
+                    System.out.println(re.eval("myDataframe =as.data.frame(allData)"));
+                    //re.eval("install.packages(\"class\")");
+                    System.out.println(re.eval("library(class)"));
+                    System.out.println(re.eval("traindata = myDataframe[1:3]"));
+                    System.out.println(re.eval("trainlabels = myDataframe[4]"));
+                    System.out.println(re.eval("myknn <- knn(train = traindata, test = traindata, cl = trainlabels[,1], k=13)"));
+                    //re.eval("install.packages(\"caret\")");
+                    System.out.println(re.eval("library(caret)"));
+                    System.out.println(re.eval("model_knn <- train(traindata, trainlabels[,1], method='knn')"));
+                    System.out.println(re.eval("predictions<-predict(object=model_knn,traindata)"));
+                    System.out.println(re.eval("x <- data.frame(\"GyroX\" =gX, \"GyroY\" =gY,\"GyroZ\" = gZ)"));
+                    System.out.println(re.eval("y <- predict(object=model_knn,x)"));
+                    pos = re.eval("y").asDouble();
+                    myPos = (int) pos;
+                    System.out.println("Value is : " + myPos);
+
+                    message = "" + myPos;
+                    char one = 0;
+
+                    Arduino arduino = new Arduino("COM3", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
+                    arduino.openConnection();
+
+                    if (message.length() >= 2) {
+                        arduino.serialWrite(message, message.length(), 1000);
+
+                    } else {
+                        one = message.charAt(0);
+                        arduino.serialWrite(one,5000);
+                    }
+                    
+                     message = arduino.serialRead();
+                     System.out.println(message);
+                    
+                    arduino.closeConnection();
                 } //=================================================================
                 else if (choice == 3) {
-                    Arduino arduino = new Arduino("COM4", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
+                    input.nextLine();
+                    Arduino arduino = new Arduino("COM3", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
                     arduino.openConnection();
-                    System.out.println("Enter 1 to switch to Training mode or 2 to Operational mode");
-                    char mode = input.nextLine().charAt(0);
-                    arduino.serialWrite(mode);
+                    System.out.println("Enter (T) to switch to Training mode or (O) to Operational mode");
+                    System.out.print("Type the mode you desire: ");
+                    mode = input.nextLine().charAt(0);
+                    System.out.println("Changing Mode...");
+                    arduino.serialWrite(mode, 5000);
+                    message = arduino.serialRead();
+
                     arduino.closeConnection();
+
+                    System.out.println(message);
 
                 } //=================================================================
                 else if (choice == 0) {
