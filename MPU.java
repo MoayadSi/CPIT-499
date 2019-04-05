@@ -1,4 +1,4 @@
-package hexapod_classifier;
+package mpuandr;
 
 import arduino.*;
 
@@ -11,9 +11,11 @@ public class MPU {
     public MPU() {
     }
 
-    public String readFromSerial() {
-        Arduino arduino = new Arduino("COM4", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
+    public String readFromSerial(char letter) {
+        Arduino arduino = new Arduino("COM3", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
         arduino.openConnection();
+        arduino.serialWrite(letter,5000);
+        
         String readings;
 
         while (true) {
