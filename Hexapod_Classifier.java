@@ -76,6 +76,7 @@ public class Hexapod_Classifier {
             Scanner input = new Scanner(System.in);
             int choice = 0;
             while (true) {
+                try{
                 System.out.println();
                 System.out.println("Please choose an action where: \n"
                         + "1: to read MPU values from the arduino serial. \n"
@@ -88,7 +89,9 @@ public class Hexapod_Classifier {
                 //=================================================================
                 if (choice == 1) {
                     //Read from the arduino serial using the MPU class methods:
+                    System.out.println("Reading from Serial...");
                     oneChar = 'R';
+                    
                     String readings = myMPU.readFromSerial(oneChar);
                     double myGyroXvalue = myMPU.ReadGyroX(readings);
                     double myGyroYvalue = myMPU.ReadGyroY(readings);
@@ -175,6 +178,24 @@ public class Hexapod_Classifier {
                 } else {
                     System.out.println("Please choose a correct number!");
                 }
+                }catch(InputMismatchException e){
+                System.err.println(e);
+                System.out.println("Please choose a valid choice!");
+                input.nextLine();
+                }catch(StringIndexOutOfBoundsException e){
+                    System.err.println(e);
+                    input.nextLine();
+                }catch(IndexOutOfBoundsException e){
+                System.err.println(e);
+                System.out.println("Reading from Gyro faild...");
+                System.out.println("Try again");
+                input.nextLine();
+                
+                }catch(Exception e){
+                System.err.println(e);
+                input.nextLine();
+                }
+                
             }
             //close the rengine and the resultset
             re.end();
