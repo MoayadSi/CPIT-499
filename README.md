@@ -1,1 +1,1 @@
-# CPIT-499: Smart Classidier for Robots
+# CPIT-499: Smart Classifier for Robots
