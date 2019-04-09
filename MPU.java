@@ -1,4 +1,4 @@
-package mpuandr;
+package Smart_Classifier;
 
 import arduino.*;
 
@@ -12,10 +12,10 @@ public class MPU {
     }
 
     public String readFromSerial(char letter) {
-        Arduino arduino = new Arduino("COM3", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
+        Arduino arduino = new Arduino("COM4", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
         arduino.openConnection();
-        arduino.serialWrite(letter,5000);
-        
+        arduino.serialWrite(letter, 5000);
+
         String readings;
 
         while (true) {
