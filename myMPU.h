@@ -1,3 +1,4 @@
+
 #include <MPU6050.h>
 MPU6050 mpu;
 
@@ -9,13 +10,13 @@ class myMPU {
   public:
 
     myMPU(int SCLnum, int SDAnum) {
-
+      //Setup the SCL and SDA pins:
       SCL_PIN = SCLnum;
       SDA_PIN = SDAnum;
     }
 
     void initializingMPU() {
-      //Initialize MPU6050
+      //Initialize MPU6050:
       Serial.println("Initialize MPU6050");
       while (!mpu.beginSoftwareI2C(SCL_PIN, SDA_PIN, MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
       {
@@ -30,11 +31,11 @@ class myMPU {
       // If you don't want use threshold, comment this line or set 0.
       mpu.setThreshold(3);
 
-      // Check settings
+      // Check settings method
       checkSettings();
     }
 
-    void checkSettings()
+    void checkSettings()    //in this method are settings for the MPU to work and make sleep mode work for the sensor:
     {
       Serial.println();
       Serial.print(" * Sleep Mode:        ");
@@ -85,7 +86,7 @@ class myMPU {
       Serial.println();
     }
 
-
+    //Get Gyro and Accel methods by using the read methods from the MPU6050 library and return it as float:
     float getGyroX() {
       Vector rawGyro = mpu.readRawGyro();
       float num1 =  rawGyro.XAxis;
@@ -123,6 +124,7 @@ class myMPU {
     }
 
     //=========================================================
+    // The following methods are used for testing purposes to expect the values to range between specific numbers:
     bool testGyroX(float gX) {
       if (gX > 63028 && gX < 67535)
         return true;
@@ -166,4 +168,3 @@ class myMPU {
     }
 
 };
-
