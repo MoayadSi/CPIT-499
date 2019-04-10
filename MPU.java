@@ -14,11 +14,13 @@ public class MPU {
     public String readFromSerial(char letter) {
         Arduino arduino = new Arduino("COM4", 9600); //enter the port name here, and ensure that Arduino is connected, otherwise exception will be thrown.
         arduino.openConnection();
+        //Write the letter and delay for 5 seconds:
         arduino.serialWrite(letter, 5000);
 
         String readings;
 
         while (true) {
+            //Read from serial:
             readings = arduino.serialRead();
 
             if (readings != "") {
@@ -32,6 +34,7 @@ public class MPU {
     }
 
     public double ReadGyroX(String readings) {
+        //After getting the readings we specify the indexes of the string in which we get the Gyro value:
         try {
             double GyroXvalue;
             GyroXvalue = Double.parseDouble(readings.substring(5, 13));
@@ -43,6 +46,7 @@ public class MPU {
     }
 
     public double ReadGyroY(String readings) {
+        //After getting the readings we specify the indexes of the string in which we get the Gyro value:
         try {
             double GyroYvalue;
             GyroYvalue = Double.parseDouble(readings.substring(18, 26));
@@ -54,6 +58,7 @@ public class MPU {
     }
 
     public double ReadGyroZ(String readings) {
+        //After getting the readings we specify the indexes of the string in which we get the Gyro value:
         try {
             double GyroZvalue;
             GyroZvalue = Double.parseDouble(readings.substring(31, 39));
